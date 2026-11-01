@@ -1,0 +1,31 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+instance/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data and model artifacts (large and/or licensed - never commit)
+datasets/*
+!datasets/README.md
+!datasets/.gitkeep
+ml_artifacts/*
+!ml_artifacts/README.md
+requirements.lock.txt
+
+# Editors / OS
+.vscode/*
+!.vscode/settings.json
+.idea/
+Thumbs.db
+.DS_Store

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, verdict_badge, demo_badge %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <header class="page-head">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="muted">Statistics for scans made from this browser on this PhishGuard installation.
+        They describe your own use and say nothing about phishing activity elsewhere.</p>
+    </div>
+    <div class="page-head__actions">
+      <form method="post" action="{{ url_for('dashboard.load_demo') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn--ghost" type="submit">Add demo scans</button>
+      </form>
+      {% if stats.demo_count %}
+      <form method="post" action="{{ url_for('dashboard.clear_demo') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn--ghost" type="submit">Remove demo scans</button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if stats.demo_count %}
+  <p class="banner banner--demo">{{ icon("info", "icon icon--sm") }}
+    {{ stats.demo_count }} of these {{ stats.total }} scans are demonstration data: synthetic addresses on reserved
+    test domains, analysed for real but not taken from real traffic.</p>
+  {% endif %}
+
+  <section class="stat-row" aria-label="Totals">
+    <div class="stat"><span class="stat__value">{{ stats.total }}</span><span class="stat__label">scans kept</span></div>
+    <div class="stat"><span class="stat__value">{{ stats.elevated }}</span><span class="stat__label">rated suspicious or worse</span></div>
+    <div class="stat"><span class="stat__value">{{ stats.ml_used }}</span><span class="stat__label">used the ML model</span></div>
+    <div class="stat"><span class="stat__value">{{ stats.provider_errors.values() | sum }}</span><span class="stat__label">blocklist lookups failed</span></div>
+  </section>
+
+  <div class="dash-grid">
+    <section class="panel" aria-labelledby="dist-heading">
+      <h2 id="dist-heading">Verdicts</h2>
+      <ul class="bars">
+        {% for d in stats.distribution %}
+        <li class="bar-row">
+          <span class="bar-row__label">{{ verdict_badge(d.verdict) }}</span>
+          <span class="bar"><span class="bar__fill verdict-fill--{{ d.verdict }}" data-bar="{{ (100 * d.count / stats.max_distribution) | round(1) }}"></span></span>
+          <span class="bar-row__value">{{ d.count }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="activity-heading">
+      <h2 id="activity-heading">Last 14 days</h2>
+      <div class="columns" role="img" aria-label="Scans per day over the last 14 days">
+        {% for day in stats.activity %}
+        <div class="column" title="{{ day.label }}: {{ day.total }} scans, {{ day.elevated }} suspicious or worse">
+          <span class="column__track">
+            <span class="column__fill" data-bar-height="{{ (100 * day.total / stats.max_activity) | round(1) }}">
+              <span class="column__elevated" data-bar-height="{{ (100 * day.elevated / (day.total or 1)) | round(1) }}"></span>
+            </span>
+          </span>
+          <span class="column__label">{{ day.label.split(" ")[0] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="legend"><span class="key key--all"></span>All scans <span class="key key--elev"></span>Suspicious or worse</p>
+      <details class="table-toggle">
+        <summary>Show as table</summary>
+        <table class="data-table data-table--compact">
+          <thead><tr><th scope="col">Day</th><th scope="col" class="num">Scans</th><th scope="col" class="num">Suspicious or worse</th></tr></thead>
+          <tbody>{% for day in stats.activity %}<tr><td>{{ day.label }}</td><td class="num">{{ day.total }}</td><td class="num">{{ day.elevated }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </details>
+    </section>
+
+    <section class="panel" aria-labelledby="components-heading">
+      <h2 id="components-heading">Detection methods</h2>
+      <div class="check check--ok">{{ icon("list", "icon icon--sm") }}
+        <div><div class="check__name">Address rules</div><div class="check__state">{{ components.rule_count }} rules · {{ components.detector_version }}</div></div></div>
+      {% for p in components.providers %}
+      <div class="check check--{{ 'ok' if p.configured else 'off' }}">{{ icon("globe", "icon icon--sm") }}
+        <div><div class="check__name">{{ p.display_name }}</div>
+          <div class="check__state">{% if p.configured %}Configured{% else %}Not configured{% endif %}
+            {% if stats.provider_errors.get(p.display_name) %} · {{ stats.provider_errors[p.display_name] }} failed lookup(s){% endif %}
+            {% if stats.provider_checks.get(p.display_name) %} · {{ stats.provider_checks[p.display_name] }} completed{% endif %}</div></div></div>
+      {% endfor %}
+      <div class="check check--{{ 'ok' if components.ml.status == 'ok' else 'off' }}">{{ icon("model", "icon icon--sm") }}
+        <div><div class="check__name">Machine-learning model</div>
+          <div class="check__state">{% if components.ml.status == 'ok' %}{{ components.ml.model_version }}{% else %}Not available: {{ components.ml.detail }}{% endif %}</div></div></div>
+    </section>
+
+    <section class="panel" aria-labelledby="recent-heading">
+      <h2 id="recent-heading">Recent scans</h2>
+      {% if stats.recent %}
+      <ul class="recent">
+        {% for r in stats.recent %}
+        <li><a href="{{ url_for('scan.result', scan_id=r.id) }}"><code>{{ r.host }}</code></a>
+          {{ verdict_badge(r.verdict, "verdict-badge--sm") }}{% if r.is_demo %} {{ demo_badge() }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+      <p><a href="{{ url_for('history.index') }}">Full history</a></p>
+      {% else %}
+      <p class="empty">No scans yet. <a href="{{ url_for('main.index') }}">Scan a link</a> or add demo scans.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>{% endblock %}

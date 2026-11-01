@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Scan a link{% endblock %}
+{% block body_class %}page-home{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div class="hero__copy">
+      <h1>Check a link before you trust it.</h1>
+      <p class="lede">PhishGuard takes a web address apart and looks for the tricks phishing links rely on:
+        borrowed brand names, look-alike characters, hidden destinations. It never opens the link.</p>
+
+      <form class="scan-form" method="post" action="{{ url_for('scan.submit') }}" novalidate data-scan-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="url-input" class="scan-form__label">Web address to check</label>
+        <div class="scan-form__row">
+          <input id="url-input" name="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" required maxlength="{{ max_url_length + 64 }}"
+                 placeholder="https://example.com/account/login"
+                 value="{{ submitted }}"
+                 aria-describedby="url-help{% if error %} url-error{% endif %}"
+                 {% if error %}aria-invalid="true" autofocus{% endif %}>
+          <button class="btn btn--primary" type="submit" data-submit>
+            {{ icon("search", "icon icon--sm") }}<span data-submit-label>Scan link</span>
+          </button>
+        </div>
+        <p id="url-help" class="field-help">Paste the full address including <code>http://</code> or <code>https://</code>.
+          Up to {{ max_url_length }} characters.</p>
+        <p id="url-error" class="field-error" role="alert" {% if not error %}hidden{% endif %} data-error>{{ error or "" }}</p>
+      </form>
+
+      <p class="assessment-note">{{ icon("info", "icon icon--sm") }}
+        Results are assessments, not guarantees. A link with no warning signs can still be harmful.</p>
+    </div>
+
+    <figure class="anatomy-demo" aria-labelledby="anatomy-caption">
+      <figcaption id="anatomy-caption">Only the registered domain tells you who controls a link</figcaption>
+      <div class="anatomy anatomy--demo" aria-hidden="true">
+        <span class="seg seg--scheme">https://</span><span class="seg seg--sub">paypal.com.account-verify.</span><span class="seg seg--reg">example.net</span><span class="seg seg--path">/signin</span>
+      </div>
+      <dl class="anatomy-key">
+        <div><dt><span class="key key--sub"></span>Subdomains</dt><dd>Written by whoever owns the domain. Anything can go here, including other companies' names.</dd></div>
+        <div><dt><span class="key key--reg"></span>Registered domain</dt><dd>Bought from a registrar. This is the site you would actually be on.</dd></div>
+      </dl>
+    </figure>
+  </div>
+</section>
+
+<section class="wrap home-info">
+  <div class="home-info__examples">
+    <h2>Try a sample</h2>
+    <p class="muted">Synthetic addresses on reserved test domains. Selecting one fills the form; nothing is visited.</p>
+    <ul class="example-list">
+      {% for ex in examples %}
+      <li><button type="button" class="example" data-example="{{ ex.url }}">
+        <span class="example__hint">{{ ex.hint }}</span>
+        <span class="example__url">{{ ex.url }}</span>
+      </button></li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="home-info__notes">
+    <div class="note">
+      <h2>{{ icon("lock", "icon icon--sm") }} Privacy</h2>
+      <p>The full address is not saved. History keeps a shortened version with query values removed,
+        visible only to this browser, and deletes it automatically.
+        <a href="{{ url_for('main.privacy') }}">Read the details</a>.</p>
+    </div>
+    <div class="note">
+      <h2>{{ icon("globe", "icon icon--sm") }} Blocklist checks</h2>
+      {% if intel_configured %}
+      <p>{{ intel_configured }} threat-intelligence service{{ "s" if intel_configured != 1 }} configured. The
+        address (without login details or fragment) is sent to {{ "them" if intel_configured != 1 else "it" }} for lookup.</p>
+      {% else %}
+      <p>No threat-intelligence service is configured, so links are checked by address analysis only.
+        See the README to add an API key.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/scanner.js') }}" defer></script>{% endblock %}

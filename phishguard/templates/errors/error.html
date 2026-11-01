@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <div class="empty-state error-state">
+    {{ icon("circle-help" if status == 404 else "circle-alert", "icon icon--lg") }}
+    <p class="error-state__code">Error {{ status }}</p>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <p class="error-state__actions">
+      <a class="btn btn--primary" href="{{ url_for('main.index') }}">Go to the scanner</a>
+      <a class="btn btn--ghost" href="{{ url_for('history.index') }}">Open history</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

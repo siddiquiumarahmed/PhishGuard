@@ -1,0 +1,35 @@
+{% macro icon(name, cls="icon") -%}
+<svg class="{{ cls }}" aria-hidden="true" focusable="false"><use href="#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro verdict_badge(verdict, size="") -%}
+{%- set VERDICT_ICONS = {
+  "confirmed_malicious": "octagon-alert",
+  "high_risk": "triangle-alert",
+  "suspicious": "circle-alert",
+  "no_threat_detected": "circle-check",
+  "inconclusive": "circle-help",
+} -%}
+<span class="verdict-badge verdict--{{ verdict }} {{ size }}">
+  {{ icon(VERDICT_ICONS.get(verdict, "circle-help"), "icon icon--sm") }}
+  <span>{{ verdict | verdict_label }}</span>
+</span>
+{%- endmacro %}
+
+{% macro severity_badge(severity) -%}
+<span class="sev sev--{{ severity }}"><span class="sev__mark" aria-hidden="true"></span>{{ severity | capitalize }}</span>
+{%- endmacro %}
+
+{% macro demo_badge() -%}
+<span class="tag tag--demo" title="Synthetic demonstration data">Demo</span>
+{%- endmacro %}
+
+{% macro status_line(label, status, detail, icon_name) -%}
+<div class="status-line status--{{ status }}">
+  {{ icon(icon_name, "icon icon--sm") }}
+  <div>
+    <div class="status-line__label">{{ label }}</div>
+    <div class="status-line__detail">{{ detail }}</div>
+  </div>
+</div>
+{%- endmacro %}

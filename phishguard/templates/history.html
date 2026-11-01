@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, verdict_badge, demo_badge %}
+{% block title %}History{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <header class="page-head">
+    <div>
+      <h1>Scan history</h1>
+      <p class="muted">Scans made from this browser. Records are deleted automatically when they expire.</p>
+    </div>
+    {% if page.total %}
+    <form method="post" action="{{ url_for('history.clear') }}" data-confirm="Delete every scan in this browser's history? This cannot be undone.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn--danger" type="submit">{{ icon("trash", "icon icon--sm") }}Clear history</button>
+    </form>
+    {% endif %}
+  </header>
+
+  <form class="filters" method="get" action="{{ url_for('history.index') }}" role="search" data-filter-form>
+    <div class="field">
+      <label for="q">Search domain or address</label>
+      <input id="q" name="q" type="search" value="{{ query.search }}" maxlength="100" placeholder="e.g. example.net">
+    </div>
+    <div class="field">
+      <label for="verdict">Verdict</label>
+      <select id="verdict" name="verdict">
+        <option value="">All verdicts</option>
+        {% for value, label in verdict_options %}
+        <option value="{{ value }}" {% if query.verdict == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--ghost" type="submit">{{ icon("search", "icon icon--sm") }}Apply</button>
+      {% if query.search or query.verdict %}<a class="link-quiet" href="{{ url_for('history.index') }}">Reset</a>{% endif %}
+    </div>
+  </form>
+
+  {% if page.items %}
+  <div class="table-wrap">
+    <table class="data-table data-table--stack">
+      <caption class="visually-hidden">Scan history, newest first</caption>
+      <thead>
+        <tr><th scope="col">Address</th><th scope="col">Verdict</th><th scope="col" class="num">Index</th>
+            <th scope="col">Scanned</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+      </thead>
+      <tbody>
+        {% for r in page.items %}
+        <tr>
+          <td class="cell-url">
+            <a href="{{ url_for('scan.result', scan_id=r.id) }}"><code>{{ r.display_url }}</code></a>
+            {% if r.is_demo %}{{ demo_badge() }}{% endif %}
+          </td>
+          <td>{{ verdict_badge(r.verdict) }}</td>
+          <td class="num">{{ r.heuristic_index }}</td>
+          <td class="nowrap">{{ r.created_at | utc }}</td>
+          <td class="cell-actions">
+            <form method="post" action="{{ url_for('history.delete', scan_id=r.id) }}" data-confirm="Delete this scan record?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="icon-btn" type="submit">{{ icon("trash", "icon icon--sm") }}<span class="visually-hidden">Delete scan of {{ r.host }}</span></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="pagination" aria-label="Pagination">
+    <span class="muted">{{ page.total }} record{{ "s" if page.total != 1 }} · page {{ page.page }} of {{ page.pages }}</span>
+    <span class="pagination__links">
+      {% if page.has_prev %}<a class="btn btn--ghost btn--sm" href="{{ url_for('history.index', q=query.search or None, verdict=query.verdict, page=page.page - 1) }}" rel="prev">Previous</a>{% endif %}
+      {% if page.has_next %}<a class="btn btn--ghost btn--sm" href="{{ url_for('history.index', q=query.search or None, verdict=query.verdict, page=page.page + 1) }}" rel="next">Next</a>{% endif %}
+    </span>
+  </nav>
+  {% elif query.search or query.verdict %}
+  <div class="empty-state">
+    {{ icon("search", "icon icon--lg") }}
+    <h2>No scans match these filters</h2>
+    <p><a href="{{ url_for('history.index') }}">Show all scans</a></p>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    {{ icon("clock", "icon icon--lg") }}
+    <h2>No scans yet</h2>
+    <p>Links you check from this browser will appear here.</p>
+    <p><a class="btn btn--primary" href="{{ url_for('main.index') }}">{{ icon("search", "icon icon--sm") }}Scan a link</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/history.js') }}" defer></script>{% endblock %}

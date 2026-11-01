@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Privacy{% endblock %}
+
+{% block content %}
+<div class="wrap page prose-page">
+  <header class="page-head"><div><h1>How your data is handled</h1>
+    <p class="muted">PhishGuard runs on your own computer. This page describes what this installation stores and sends.</p></div></header>
+
+  <div class="prose">
+    <h2>What is stored</h2>
+    <ul>
+      <li>A shortened copy of the address: scheme, host, path (truncated) and query parameter <em>names</em>.
+        Query values, login details and the part after <code>#</code> are removed.</li>
+      <li>A keyed fingerprint of the full address, which cannot be reversed into the address.</li>
+      <li>The verdict, findings and the status of each check.</li>
+      {% if store_normalized %}
+      <li><strong>This installation is configured to also store the normalised address</strong> (without login
+        details or fragment) because <code>STORE_NORMALIZED_URL</code> is enabled.</li>
+      {% endif %}
+    </ul>
+
+    <h2>Who can see it</h2>
+    <p>History is tied to an anonymous identifier in this browser's session cookie. Other browsers using the same
+      installation cannot see these records, and the database stores only a keyed hash of the identifier.
+      Clearing your cookies starts a new, empty history.</p>
+
+    <h2>How long it is kept</h2>
+    <p>Every record is deleted automatically {{ retention_days }} day{{ "s" if retention_days != 1 }} after the scan.
+      You can delete individual records or your whole history at any time from the History page.</p>
+
+    <h2>What is sent elsewhere</h2>
+    {% if intel_configured %}
+    <p>{{ intel_configured }} threat-intelligence service{{ "s are" if intel_configured != 1 else " is" }} configured.
+      For each scan, the normalised address (including its path and query, but without login details or fragment)
+      is sent to {{ "those services" if intel_configured != 1 else "that service" }} to check it against their
+      lists. Their own privacy terms apply.</p>
+    {% else %}
+    <p>Nothing. No threat-intelligence service is configured, so addresses never leave this computer.</p>
+    {% endif %}
+    <p>The submitted link itself is never opened, downloaded or contacted by PhishGuard.</p>
+
+    <h2>Logs</h2>
+    <p>The application log records scan IDs and verdicts, never the scanned addresses. Query strings are removed
+      from request log lines.</p>
+  </div>
+</div>
+{% endblock %}

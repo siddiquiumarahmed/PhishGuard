@@ -1,0 +1,66 @@
+{% from "_macros.html" import icon %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}PhishGuard{% endblock %} · PhishGuard</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% include "_icons.html" %}
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap site-header__inner">
+      <a class="brand" href="{{ url_for('main.index') }}">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="" width="28" height="28">
+        <span>PhishGuard</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        {{ icon("menu") }}<span class="visually-hidden">Menu</span>
+      </button>
+      {% set ep = request.endpoint or "" %}
+      <nav id="site-nav" class="site-nav" aria-label="Main">
+        <a href="{{ url_for('main.index') }}" {% if ep in ("main.index", "scan.submit") %}aria-current="page"{% endif %}>Scan</a>
+        <a href="{{ url_for('history.index') }}" {% if ep.startswith("history") %}aria-current="page"{% endif %}>History</a>
+        <a href="{{ url_for('dashboard.index') }}" {% if ep.startswith("dashboard") %}aria-current="page"{% endif %}>Dashboard</a>
+        <a href="{{ url_for('main.methodology') }}" {% if ep == "main.methodology" %}aria-current="page"{% endif %}>Methodology</a>
+        <a href="{{ url_for('main.api_docs') }}" {% if ep == "main.api_docs" %}aria-current="page"{% endif %}>API</a>
+        <a href="{{ url_for('main.privacy') }}" {% if ep == "main.privacy" %}aria-current="page"{% endif %}>Privacy</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="wrap flash-stack" role="status">
+        {% for category, message in messages %}
+        <div class="flash flash--{{ category }}">
+          {{ icon("circle-check" if category == "success" else "circle-alert", "icon icon--sm") }}
+          <span>{{ message }}</span>
+          <button type="button" class="flash__close" data-dismiss>{{ icon("x", "icon icon--sm") }}<span class="visually-hidden">Dismiss</span></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap site-footer__inner">
+      <p>PhishGuard {{ app_version }} runs locally. Results are assessments, not guarantees. Submitted links are never opened.</p>
+      <p><a href="{{ url_for('main.privacy') }}">How your data is handled</a></p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

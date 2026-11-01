@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, verdict_badge, severity_badge %}
+{% block title %}Methodology{% endblock %}
+
+{% block content %}
+<div class="wrap page prose-page">
+  <header class="page-head">
+    <div>
+      <h1>How PhishGuard decides</h1>
+      <p class="muted">Every scan combines up to three methods. This page is generated from the same rule
+        definitions the detector uses.</p>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="On this page">
+    <a href="#methods">Methods</a><a href="#verdicts">Verdicts</a><a href="#scoring">Risk index</a><a href="#rules">Rules</a><a href="#limits">Limitations</a>
+  </nav>
+
+  <section id="methods" class="prose">
+    <h2>Methods</h2>
+    <dl class="defs">
+      <div><dt>{{ icon("list", "icon icon--sm") }} Address rules</dt>
+        <dd>The address is parsed exactly as a browser would read it, then checked by {{ rules | length }} rules
+          for deception techniques. This always runs and needs no network access.</dd></div>
+      <div><dt>{{ icon("globe", "icon icon--sm") }} Threat intelligence</dt>
+        <dd>Optional lookups against Google Safe Browsing, Google Web Risk and PhishTank when configured.
+          A failed or skipped lookup is reported as such and never counts as a clean result.</dd></div>
+      <div><dt>{{ icon("model", "icon icon--sm") }} Machine learning</dt>
+        <dd>An optional scikit-learn model trained on a labelled dataset using the same address features. Its
+          score is an uncalibrated estimate. On its own it can raise a verdict to Suspicious at most, and it never
+          lowers a verdict.</dd></div>
+    </dl>
+    <p>PhishGuard never opens the submitted link. Page content, redirects and downloads are therefore not inspected.</p>
+  </section>
+
+  <section id="verdicts" class="prose">
+    <h2>Verdicts, in order of precedence</h2>
+    <p>The first condition that applies decides the verdict.</p>
+    <ol class="precedence">
+      <li>{{ verdict_badge("confirmed_malicious") }} A threat-intelligence service returned a verified listing.</li>
+      <li>{{ verdict_badge("high_risk") }} A critical finding; two or more high findings; or a high finding
+        corroborated by a medium finding, an ML score above threshold, or an unverified listing.</li>
+      <li>{{ verdict_badge("suspicious") }} A high finding; two or more medium findings; an unverified listing;
+        or an ML score above threshold.</li>
+      <li>{{ verdict_badge("inconclusive") }} Nothing above applies, but a necessary check did not complete:
+        rules failed, or a configured blocklist lookup failed.</li>
+      <li>{{ verdict_badge("no_threat_detected") }} Otherwise. The checks that actually ran are always listed.</li>
+    </ol>
+  </section>
+
+  <section id="scoring" class="prose">
+    <h2>Heuristic risk index</h2>
+    <p>A 0–100 number computed by adding a fixed weight for each finding and capping at 100. It helps compare
+      scans; it is not a probability and has not been calibrated against real outcomes. The verdict is decided by
+      the precedence above, not by this number.</p>
+    <table class="data-table data-table--compact weights">
+      <thead><tr><th scope="col">Severity</th><th scope="col" class="num">Weight</th></tr></thead>
+      <tbody>{% for sev, w in weights %}<tr><td>{{ severity_badge(sev) }}</td><td class="num">{{ w }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+
+  <section id="rules">
+    <h2>Rules</h2>
+    <div class="rule-list">
+      {% for r in rules %}
+      <article class="rule" id="{{ r.rule_id }}">
+        <h3><span class="rule__id">{{ r.rule_id }}</span> {{ r.title }}</h3>
+        <p><strong>Why:</strong> {{ r.rationale }}</p>
+        <p class="muted"><strong>Limitations:</strong> {{ r.limitations }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="limits" class="prose">
+    <h2>Known limitations</h2>
+    <ul>
+      <li>Brand protection covers a built-in list of frequently impersonated organisations only.</li>
+      <li>Registered domains are computed from a compact offline suffix list, not the full Public Suffix List.</li>
+      <li>Compromised legitimate sites and brand-new phishing domains with neutral names can look clean.</li>
+      <li>Shortened links are not expanded, because doing so would contact the attacker's infrastructure.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

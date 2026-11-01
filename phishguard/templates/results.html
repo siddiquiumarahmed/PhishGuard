@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, verdict_badge, severity_badge, demo_badge %}
+{% block title %}{{ scan.label }} – scan result{% endblock %}
+
+{% block content %}
+{% set VERDICT_ICONS = {"confirmed_malicious": "octagon-alert", "high_risk": "triangle-alert",
+  "suspicious": "circle-alert", "no_threat_detected": "circle-check", "inconclusive": "circle-help"} %}
+{% set a = scan.anatomy or {} %}
+<div class="wrap result">
+  <section class="verdict-panel verdict--{{ scan.verdict }}" aria-labelledby="verdict-heading">
+    <div class="verdict-panel__icon">{{ icon(VERDICT_ICONS.get(scan.verdict, "circle-help"), "icon icon--xl") }}</div>
+    <div class="verdict-panel__body">
+      <h1 id="verdict-heading">{{ scan.label }}</h1>
+      <p class="verdict-panel__summary">{{ scan.summary }}</p>
+      <p class="verdict-panel__url"><span class="visually-hidden">Scanned address: </span><code>{{ scan.display_url }}</code>
+        {% if scan.is_demo %}{{ demo_badge() }}{% endif %}</p>
+    </div>
+  </section>
+
+  {% if a %}
+  <section class="anatomy-panel" aria-labelledby="anatomy-heading">
+    <h2 id="anatomy-heading">Who controls this link</h2>
+    <div class="anatomy" role="group" aria-label="Address broken into parts">
+      <span class="seg seg--scheme" title="Protocol">{{ a.scheme }}://</span>
+      {%- if a.credentials %}<span class="seg seg--cred" title="Login details placed before @ (hidden)">[login details hidden]@</span>{% endif -%}
+      {%- if a.subdomain %}<span class="seg seg--sub" title="Subdomains: chosen freely by the domain owner">{{ a.subdomain }}.</span>{% endif -%}
+      <span class="seg seg--reg" title="{{ 'IP address' if a.is_ip else 'Registered domain' }}">{{ a.registered }}</span>
+      {%- if a.port %}<span class="seg seg--port">:{{ a.port }}</span>{% endif -%}
+      <span class="seg seg--path">{{ a.path }}</span>
+      {%- if a.has_query %}<span class="seg seg--query">?{% for k in a.query_keys %}{{ k }}=…{% if not loop.last %}&amp;{% endif %}{% else %}…{% endfor %}</span>{% endif %}
+    </div>
+    <p class="anatomy-panel__owner">
+      {% if a.is_ip %}
+        This link points to the IP address <strong>{{ a.registered }}</strong> rather than a named site.
+      {% else %}
+        You would be on <strong>{{ a.registered }}</strong>.
+        {% if a.subdomain %}Everything before it ({{ a.subdomain }}) is chosen by that domain's owner.{% endif %}
+      {% endif %}
+      {% if a.punycode %}<br>Internationalised name; its ASCII form is <code>{{ a.punycode }}</code>.{% endif %}
+    </p>
+  </section>
+  {% endif %}
+
+  <div class="result__grid">
+    <div class="result__main">
+      <section aria-labelledby="reasons-heading" class="block">
+        <h2 id="reasons-heading">Why this verdict</h2>
+        <ul class="reasons">
+          {% for reason in scan.reasons %}<li>{{ reason }}</li>{% endfor %}
+        </ul>
+      </section>
+
+      <section aria-labelledby="findings-heading" class="block">
+        <h2 id="findings-heading">Findings <span class="count">{{ scan.findings | length }}</span></h2>
+        {% if scan.findings %}
+        <ol class="findings">
+          {% for f in scan.findings %}
+          <li class="finding finding--{{ f.severity }}">
+            <div class="finding__head">
+              {{ severity_badge(f.severity) }}
+              <h3>{{ f.title }}</h3>
+              <span class="finding__id" title="Rule ID">{{ f.rule_id }}</span>
+            </div>
+            <p>{{ f.explanation }}</p>
+            {% if f.evidence %}
+            <ul class="evidence" aria-label="Evidence">
+              {% for e in f.evidence %}<li><code>{{ e }}</code></li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if f.recommendation %}<p class="finding__advice">{{ icon("info", "icon icon--sm") }} {{ f.recommendation }}</p>{% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <p class="empty">No rule matched this address.</p>
+        {% endif %}
+      </section>
+
+      <section aria-labelledby="next-heading" class="block">
+        <h2 id="next-heading">What to do next</h2>
+        <ul class="checklist">
+          {% for r in scan.recommendations %}<li>{{ r }}</li>{% endfor %}
+        </ul>
+      </section>
+
+      <section aria-labelledby="limits-heading" class="block block--quiet">
+        <h2 id="limits-heading">Limits of this analysis</h2>
+        <ul class="plain-list">
+          {% for l in scan.limitations %}<li>{{ l }}</li>{% endfor %}
+          {% for n in scan.parser_notes %}<li>{{ n }}</li>{% endfor %}
+        </ul>
+      </section>
+    </div>
+
+    <aside class="result__side" aria-label="Scan details">
+      <section class="side-block">
+        <h2>Heuristic risk index</h2>
+        <div class="meter" data-bar="{{ scan.heuristic_index }}" role="img"
+             aria-label="Heuristic risk index {{ scan.heuristic_index }} out of 100">
+          <div class="meter__fill meter--{{ scan.index_band }}"></div>
+        </div>
+        <p class="meter__value"><strong>{{ scan.heuristic_index }}</strong> / 100 · {{ scan.index_band }}</p>
+        <p class="fine">Sum of rule severities. Not a probability; see <a href="{{ url_for('main.methodology') }}#scoring">how it is calculated</a>.</p>
+      </section>
+
+      <section class="side-block">
+        <h2>Checks performed</h2>
+        {% set rules = scan.components.get("rules", {}) %}
+        <div class="check check--{{ 'ok' if rules.get('status') == 'ok' else 'failed' }}">
+          {{ icon("list", "icon icon--sm") }}
+          <div><div class="check__name">Address rules</div>
+            <div class="check__state">{% if rules.get('status') == 'ok' %}{{ rules.get('rules_evaluated') }} rules evaluated{% else %}Incomplete ({{ rules.get('rule_errors', []) | length }} rule errors){% endif %}</div></div>
+        </div>
+        {% for p in scan.threat_intelligence %}
+        {% set state = 'ok' if p.status == 'no_match' else ('alert' if p.status in ('match', 'unverified_listing') else ('off' if p.status == 'not_configured' else 'failed')) %}
+        <div class="check check--{{ state }}">
+          {{ icon("globe", "icon icon--sm") }}
+          <div><div class="check__name">{{ p.display_name }}</div>
+            <div class="check__state">{{ p.status_label }}{% if p.cached %} (cached){% endif %}</div>
+            {% if p.threat_types %}<div class="check__detail">{{ p.threat_types | join(", ") }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% set ml = scan.machine_learning or {} %}
+        <div class="check check--{{ ('alert' if ml.get('flagged') else 'ok') if ml.get('status') == 'ok' else 'off' }}">
+          {{ icon("model", "icon icon--sm") }}
+          <div><div class="check__name">Machine-learning model</div>
+            <div class="check__state">
+              {% if ml.get('status') == 'ok' %}Score {{ "%.2f" | format(ml.score) }} (threshold {{ "%.2f" | format(ml.threshold) }}){% if ml.flagged %} – above threshold{% endif %}
+              {% else %}Not used: {{ ml.get('detail', 'unavailable') }}{% endif %}
+            </div>
+            {% if ml.get('status') == 'ok' %}<div class="check__detail">Uncalibrated score, not a probability</div>{% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="side-block">
+        <h2>Scan details</h2>
+        <dl class="meta">
+          <div><dt>Scanned</dt><dd>{{ record.created_at | utc }}</dd></div>
+          <div><dt>Deleted after</dt><dd>{{ record.expires_at | utc }}</dd></div>
+          <div><dt>Detector</dt><dd>{{ scan.detector_version }}</dd></div>
+          <div><dt>Model</dt><dd>{{ scan.model_version or "none" }}</dd></div>
+          <div><dt>Scan ID</dt><dd><code class="break">{{ scan.id }}</code></dd></div>
+        </dl>
+      </section>
+
+      <div class="side-actions">
+        <a class="btn btn--primary" href="{{ url_for('main.index') }}">{{ icon("search", "icon icon--sm") }}Scan another link</a>
+        <a class="btn btn--ghost" href="{{ url_for('history.index') }}">{{ icon("clock", "icon icon--sm") }}View history</a>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

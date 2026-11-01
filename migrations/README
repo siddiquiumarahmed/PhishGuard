@@ -1,0 +1,7 @@
+Single-database Alembic environment managed by Flask-Migrate.
+
+Common commands (run from the project root with the virtual environment active):
+
+    flask --app app db upgrade                         # apply migrations
+    flask --app app db migrate -m "describe change"    # generate a migration after editing models
+    flask --app app db downgrade                       # revert the last migration

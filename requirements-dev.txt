@@ -1,0 +1,6 @@
+# Development, test and security tooling.
+-r requirements.txt
+pytest>=8.0,<10
+ruff>=0.6
+bandit[toml]>=1.7.9
+pip-audit>=2.7

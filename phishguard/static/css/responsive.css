@@ -1,0 +1,47 @@
+/* PhishGuard — responsive adjustments. */
+
+@media (max-width: 960px) {
+  .hero__grid, .home-info { grid-template-columns: 1fr; gap: 2rem; }
+  .result__grid { grid-template-columns: 1fr; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .rule-list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 800px) {
+  .nav-toggle { display: inline-flex; }
+  .site-header__inner { flex-wrap: wrap; }
+  .site-nav { display: none; width: 100%; flex-direction: column; padding-bottom: 0.75rem; margin-left: 0; }
+  .site-nav.is-open { display: flex; }
+  .site-nav a { padding: 0.65rem 0.75rem; }
+  .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .filters { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .wrap { padding: 0 1rem; }
+  .hero { padding-top: 2.25rem; }
+  .hero h1 { font-size: var(--step-3); }
+  .lede { font-size: var(--step-0); }
+  .scan-form__row { flex-direction: column; }
+  .scan-form__row .btn { width: 100%; }
+  .example-list { grid-template-columns: 1fr; }
+  .verdict-panel { flex-direction: column; padding: 1.25rem; gap: 0.6rem; }
+  .verdict-panel .icon--xl { width: 2.5rem; height: 2.5rem; }
+  .page-head { flex-direction: column; }
+  .bar-row { grid-template-columns: 1fr 2rem; }
+  .bar-row__label { grid-column: 1 / -1; }
+  .bar-row .bar { grid-column: 1; }
+  .site-footer__inner { flex-direction: column; }
+  /* History table becomes a stacked list on narrow screens */
+  .data-table--stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .data-table--stack tr { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 0.75rem; padding: 0.85rem 0.9rem;
+                          border-bottom: 1px solid var(--line); }
+  .data-table--stack tbody tr:last-child { border-bottom: 0; }
+  .data-table--stack td { display: block; padding: 0; border: 0; }
+  .data-table--stack .cell-url { grid-column: 1 / -1; max-width: none; }
+  .data-table--stack td.num { display: none; }
+  .data-table--stack td.nowrap { grid-column: 1; color: var(--muted); font-size: 0.85rem; }
+  .data-table--stack .cell-actions { grid-column: 2; grid-row: 2 / span 2; align-self: center; width: auto; }
+}

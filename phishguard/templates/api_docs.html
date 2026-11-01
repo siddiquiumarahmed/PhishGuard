@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}API{% endblock %}
+
+{% block content %}
+<div class="wrap page prose-page">
+  <header class="page-head"><div><h1>REST API</h1>
+    <p class="muted">Version 1, served from <code>/api/v1</code>. JSON in, JSON out.</p></div></header>
+
+  <div class="prose">
+    <h2>Sessions and CSRF</h2>
+    <p>The API uses the same anonymous, cookie-based session as the web interface, so each client sees only its
+      own scans. Requests that change data (<code>POST</code>, <code>DELETE</code>) must send the CSRF token from
+      <code>GET /api/v1/session</code> in the <code>X-CSRFToken</code> header, and keep the session cookie.</p>
+
+    <h2>Response format</h2>
+<pre><code>{"ok": true,  "data": { ... }, "meta": { ... }}
+{"ok": false, "error": {"code": "invalid_url.missing_scheme", "message": "...", "field": "url"}}</code></pre>
+
+    <h2>Endpoints</h2>
+    <table class="data-table">
+      <thead><tr><th scope="col">Method and path</th><th scope="col">Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /api/v1/session</code></td><td>Start a session; returns <code>csrf_token</code>.</td></tr>
+        <tr><td><code>POST /api/v1/scan</code></td><td>Scan a URL. Body <code>{"url": "https://…"}</code> (max {{ max_url_length }} characters). Returns 201 with the full report.</td></tr>
+        <tr><td><code>GET /api/v1/scans</code></td><td>List your scans. Query: <code>q</code>, <code>verdict</code>, <code>page</code>, <code>per_page</code> (≤ 100).</td></tr>
+        <tr><td><code>GET /api/v1/scans/&lt;id&gt;</code></td><td>One full report. Unknown or other sessions' IDs return 404.</td></tr>
+        <tr><td><code>DELETE /api/v1/scans/&lt;id&gt;</code></td><td>Delete one of your scans.</td></tr>
+        <tr><td><code>GET /api/v1/health</code></td><td>Liveness and database check.</td></tr>
+        <tr><td><code>GET /api/v1/status</code></td><td>Which detection components are available. Never returns keys.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Status codes</h2>
+    <p><code>400</code> malformed request or failed CSRF check · <code>404</code> not found · <code>415</code> body is
+      not JSON · <code>422</code> the URL was rejected by validation · <code>429</code> rate limit reached ·
+      <code>500</code> unexpected error (details only in the server log).</p>
+
+    <h2>Example (PowerShell)</h2>
+<pre><code>$base = "http://127.0.0.1:5000/api/v1"
+$s = Invoke-RestMethod "$base/session" -SessionVariable pg
+$body = @{ url = "https://paypal.com.account-verify.example.net/signin" } | ConvertTo-Json
+$r = Invoke-RestMethod "$base/scan" -Method Post -WebSession $pg `
+       -ContentType "application/json" -Headers @{ "X-CSRFToken" = $s.data.csrf_token } -Body $body
+$r.data.verdict
+$r.data.findings | Select-Object rule_id, severity, title</code></pre>
+
+    <h2>Example (Python)</h2>
+<pre><code>import requests
+
+s = requests.Session()
+base = "http://127.0.0.1:5000/api/v1"
+token = s.get(f"{base}/session").json()["data"]["csrf_token"]
+r = s.post(f"{base}/scan", json={"url": "http://paypal.com@203.0.113.7/login"},
+           headers={"X-CSRFToken": token})
+print(r.status_code, r.json()["data"]["verdict"])</code></pre>
+  </div>
+</div>
+{% endblock %}
